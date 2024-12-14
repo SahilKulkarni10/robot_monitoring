@@ -127,15 +127,22 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+
 const App = () => {
   const [robots, setRobots] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-
+  const [statusFilter, setStatusFilter] = useState(""); // Filter by Online/Offline
+  const [batteryFilter, setBatteryFilter] = useState(""); // Filter by Low Battery
+  
   useEffect(() => {
+
     const fetchData = async () => {
       try {
-        // const response = await fetch("http://127.0.0.1:8000/robots");
-        const response = await fetch("https://robot-backend-1.onrender.com/robots");
+        const apiUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000/robots" // Local URL for development
+          : "https://robot-backend-1.onrender.com/robots"; // Production URL
+    
+        const response = await fetch(apiUrl);
         const data = await response.json();
         setRobots(data);
         setLastUpdated(new Date());
@@ -149,9 +156,13 @@ const App = () => {
     let socket = null;
 
     const connectWebSocket = () => {
-      // socket = new WebSocket("ws://127.0.0.1:8000/ws");
-      socket = new WebSocket("ws://robot-backend-1.onrender.com/ws");
-
+      const socketUrl =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "ws://127.0.0.1:8000/ws" // Local WebSocket URL
+          : "ws://robot-backend-1.onrender.com/ws"; // Production WebSocket URL
+    
+      const socket = new WebSocket(socketUrl);
+    
       socket.onopen = () => console.log("WebSocket connected");
       socket.onmessage = (event) => {
         try {
@@ -162,17 +173,18 @@ const App = () => {
           console.error("Error parsing WebSocket message:", error);
         }
       };
-
+    
       socket.onclose = () => {
         console.warn("WebSocket closed. Reconnecting...");
         setTimeout(connectWebSocket, 5000);
       };
-
+    
       socket.onerror = (error) => {
         console.error("WebSocket error:", error);
         socket?.close();
       };
     };
+    
 
     connectWebSocket();
 
@@ -185,6 +197,21 @@ const App = () => {
     return "bg-green-100 text-green-800";
   };
 
+  // Filter robots based on selected status and battery filter
+  const filteredRobots = robots.filter((robot) => {
+    // Filter by Online/Offline status
+    if (statusFilter && robot["Online/Offline"] !== (statusFilter === "Online")) {
+      return false;
+    }
+
+    // Filter by Low Battery
+    if (batteryFilter === "Low" && robot["Battery Percentage"] >= 20) {
+      return false;
+    }
+
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-center p-6">
       <div className="container mx-auto">
@@ -196,6 +223,30 @@ const App = () => {
           <div className="text-sm text-gray-500 flex items-center">
             <RefreshCcwIcon size={16} className="mr-2" />
             Last Updated: {lastUpdated.toLocaleString()}
+          </div>
+        </div>
+
+        {/* Filter Section */}
+        <div className="flex justify-between mb-6">
+          <div className="flex items-center">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="mr-4 p-2 border rounded"
+            >
+              <option value="">All Status</option>
+              <option value="Online">Online</option>
+              <option value="Offline">Offline</option>
+            </select>
+
+            <select
+              value={batteryFilter}
+              onChange={(e) => setBatteryFilter(e.target.value)}
+              className="p-2 border rounded"
+            >
+              <option value="">All Battery Levels</option>
+              <option value="Low">Low Battery</option>
+            </select>
           </div>
         </div>
 
@@ -217,7 +268,7 @@ const App = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {robots.map((robot) => (
+                  {filteredRobots.map((robot) => (
                     <tr 
                       key={robot["Robot ID"]} 
                       className="border-b hover:bg-gray-50 transition"
@@ -258,7 +309,7 @@ const App = () => {
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {robots.map((robot) => (
+                {filteredRobots.map((robot) => (
                   robot["Location"] && robot["Location"].length === 2 ? ( // Ensure Location has 2 elements
                     <Marker 
                       key={robot["Robot ID"]}
@@ -284,4 +335,5 @@ const App = () => {
 };
 
 export default App;
+
 
