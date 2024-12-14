@@ -135,7 +135,7 @@ const App = () => {
     const fetchData = async () => {
       try {
         // const response = await fetch("http://127.0.0.1:8000/robots");
-        const response = await fetch("http://https://robot-backend-1.onrender.com/robots");
+        const response = await fetch("https://robot-backend-1.onrender.com");
         const data = await response.json();
         setRobots(data);
         setLastUpdated(new Date());
