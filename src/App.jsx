@@ -149,7 +149,8 @@ const App = () => {
     let socket = null;
 
     const connectWebSocket = () => {
-      socket = new WebSocket("ws://127.0.0.1:8000/ws");
+      // socket = new WebSocket("ws://127.0.0.1:8000/ws");
+      socket = new WebSocket("ws://robot-backend-1.onrender.com/ws");
 
       socket.onopen = () => console.log("WebSocket connected");
       socket.onmessage = (event) => {
