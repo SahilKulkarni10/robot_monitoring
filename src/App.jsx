@@ -14,8 +14,8 @@ import "leaflet/dist/leaflet.css";
 const App = () => {
   const [robots, setRobots] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState(""); // Filter by Online/Offline
-  const [batteryFilter, setBatteryFilter] = useState(""); // Filter by Low Battery
+  const [statusFilter, setStatusFilter] = useState(""); 
+  const [batteryFilter, setBatteryFilter] = useState(""); 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,9 +82,9 @@ const App = () => {
     return "bg-green-100 text-green-800";
   };
 
-  // Filter robots based on selected status and battery filter
+
   const filteredRobots = robots.filter((robot) => {
-    // Filter by Online/Offline status
+
     if (
       statusFilter &&
       robot["Online/Offline"] !== (statusFilter === "Online")
@@ -92,7 +92,7 @@ const App = () => {
       return false;
     }
 
-    // Filter by Low Battery
+
     if (batteryFilter === "Low" && robot["Battery Percentage"] >= 20) {
       return false;
     }
@@ -139,7 +139,7 @@ const App = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Robot List Section */}
+
           <div className="bg-white shadow-lg rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">
               Robot Details
@@ -194,7 +194,7 @@ const App = () => {
             </div>
           </div>
 
-          {/* Map View Section */}
+
           <div className="bg-white shadow-lg rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">
               <MapPinIcon className="inline-block mr-2 text-blue-600" />
@@ -208,10 +208,10 @@ const App = () => {
               >
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 {filteredRobots.map((robot) =>
-                  robot["Location"] && robot["Location"].length === 2 ? ( // Ensure Location has 2 elements
+                  robot["Location"] && robot["Location"].length === 2 ? ( 
                     <Marker
                       key={robot["Robot ID"]}
-                      position={robot["Location"]} // Robot's location [lat, lon]
+                      position={robot["Location"]} 
                       icon={
                         new L.Icon({
                           iconUrl:
