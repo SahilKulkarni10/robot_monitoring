@@ -5,17 +5,26 @@ import {
   CpuIcon,
   MapPinIcon,
   RefreshCcwIcon,
-  AlertTriangleIcon,
+  SearchIcon,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "/leaflet/marker-icon.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+});
+
 const App = () => {
   const [robots, setRobots] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState(""); 
-  const [batteryFilter, setBatteryFilter] = useState(""); 
+  const [statusFilter, setStatusFilter] = useState("");
+  const [batteryFilter, setBatteryFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState(""); 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,8 +32,8 @@ const App = () => {
         const apiUrl =
           window.location.hostname === "localhost" ||
           window.location.hostname === "127.0.0.1"
-            ? "http://127.0.0.1:8000/robots" // Local URL for development
-            : "https://robot-backend-1.onrender.com/robots"; // Production URL
+            ? "http://127.0.0.1:8000/robots"
+            : "https://robot-backend-1.onrender.com/robots";
 
         const response = await fetch(apiUrl);
         const data = await response.json();
@@ -43,10 +52,10 @@ const App = () => {
       const socketUrl =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1"
-          ? "ws://127.0.0.1:8000/ws" // Local WebSocket URL
-          : "ws://robot-backend-1.onrender.com/ws"; // Production WebSocket URL
+          ? "ws://127.0.0.1:8000/ws"
+          : "ws://robot-backend-1.onrender.com/ws";
 
-      const socket = new WebSocket(socketUrl);
+      socket = new WebSocket(socketUrl);
 
       socket.onopen = () => console.log("WebSocket connected");
       socket.onmessage = (event) => {
@@ -82,26 +91,24 @@ const App = () => {
     return "bg-green-100 text-green-800";
   };
 
-
   const filteredRobots = robots.filter((robot) => {
+    const matchesStatus =
+      !statusFilter ||
+      robot["Online/Offline"] === (statusFilter === "Online");
 
-    if (
-      statusFilter &&
-      robot["Online/Offline"] !== (statusFilter === "Online")
-    ) {
-      return false;
-    }
+    const matchesBattery =
+      !batteryFilter ||
+      (batteryFilter === "Low" && robot["Battery Percentage"] < 20);
 
+    const matchesSearch =
+      !searchQuery ||
+      robot["Robot ID"].toString().toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (batteryFilter === "Low" && robot["Battery Percentage"] >= 20) {
-      return false;
-    }
-
-    return true;
+    return matchesStatus && matchesBattery && matchesSearch;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center p-6">
+    <div className="min-h-screen flex justify-center items-center p-6">
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center">
@@ -114,13 +121,13 @@ const App = () => {
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="flex justify-between mb-6">
+  
+        <div className="flex justify-between mb-6 items-center">
           <div className="flex items-center">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="mr-4 p-2 border rounded"
+              className="mr-4 p-2 border  rounded-full"
             >
               <option value="">All Status</option>
               <option value="Online">Online</option>
@@ -130,16 +137,30 @@ const App = () => {
             <select
               value={batteryFilter}
               onChange={(e) => setBatteryFilter(e.target.value)}
-              className="p-2 border rounded"
+              className="mr-4 p-2 border  rounded-full"
             >
               <option value="">All Battery Levels</option>
               <option value="Low">Low Battery</option>
             </select>
+
+            
+            <div className="relative">
+              <SearchIcon
+                size={18}
+                className="absolute top-2 left-2 text-gray-500 "
+              />
+              <input
+                type="text"
+                placeholder="Search Robot ID"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="p-2 pl-8 border  w-full rounded-full"
+              />
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
           <div className="bg-white shadow-lg rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">
               Robot Details
@@ -182,10 +203,7 @@ const App = () => {
                         />
                         {robot["Battery Percentage"]}%
                       </td>
-                      <td className="p-3">
-                        <CpuIcon size={16} className="inline-block mr-2" />
-                        {robot["CPU Usage"]}%
-                      </td>
+                      <td className="p-3">{robot["CPU Usage"]}%</td>
                       <td className="p-3">{robot["RAM Consumption"]} MB</td>
                     </tr>
                   ))}
@@ -194,40 +212,39 @@ const App = () => {
             </div>
           </div>
 
-
           <div className="bg-white shadow-lg rounded-xl p-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">
               <MapPinIcon className="inline-block mr-2 text-blue-600" />
               Robot Locations
             </h2>
-            <div className="h-[500px] bg-gray-100 rounded-lg">
-              <MapContainer
-                center={[51.505, -0.09]}
-                zoom={13}
-                className="h-full w-full"
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {filteredRobots.map((robot) =>
-                  robot["Location"] && robot["Location"].length === 2 ? ( 
-                    <Marker
-                      key={robot["Robot ID"]}
-                      position={robot["Location"]} 
-                      icon={
-                        new L.Icon({
-                          iconUrl:
-                            "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-                          iconSize: [25, 41],
-                          iconAnchor: [12, 41],
-                          popupAnchor: [1, -34],
-                        })
-                      }
-                    >
-                      <Popup>{`Robot ID: ${robot["Robot ID"]}`}</Popup>
-                    </Marker>
-                  ) : null
-                )}
-              </MapContainer>
-            </div>
+            <MapContainer
+              center={[20.5937, 78.9629]}
+              zoom={3}
+              style={{ height: "500px", width: "100%" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+              {filteredRobots.map((robot) => (
+                robot["Location Coordinates"] && (
+                  <Marker
+                    key={robot["Robot ID"]}
+                    position={robot["Location Coordinates"]}
+                  >
+                    <Popup>
+                      <div>
+                        <h3>Robot ID: {robot["Robot ID"]}</h3>
+                        <p>Status: {robot["Online/Offline"] ? "Online" : "Offline"}</p>
+                        <p>Battery: {robot["Battery Percentage"]}%</p>
+                        <p>CPU: {robot["CPU Usage"]}%</p>
+                        <p>RAM: {robot["RAM Consumption"]} MB</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              ))}
+            </MapContainer>
           </div>
         </div>
       </div>
@@ -236,6 +253,3 @@ const App = () => {
 };
 
 export default App;
-
-
-
