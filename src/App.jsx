@@ -52,7 +52,7 @@ const App = () => {
       const socketUrl =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1"
-          ? "ws://127.0.0.1:8000/ws"
+          ? "wss://127.0.0.1:8000/ws"
           : "wss://robot-backend-1.onrender.com/ws";
 
       socket = new WebSocket(socketUrl);
